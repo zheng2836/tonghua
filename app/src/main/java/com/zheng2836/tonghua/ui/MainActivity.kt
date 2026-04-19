@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.zheng2836.tonghua.AppGraph
 import com.zheng2836.tonghua.telecom.PhoneAccountRegistrar
 
 class MainActivity : ComponentActivity() {
@@ -33,6 +34,8 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 MainScreen(
                     enabled = PhoneAccountRegistrar.isEnabled(this),
+                    signalingState = AppGraph.signalingClient.connectionState,
+                    iceState = AppGraph.webRtcEngine.iceState,
                     onOpenSettings = {
                         PhoneAccountRegistrar.registerIfNeeded(this)
                         PhoneAccountRegistrar.openPhoneAccountSettings(this)
@@ -62,7 +65,12 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MainScreen(enabled: Boolean, onOpenSettings: () -> Unit) {
+private fun MainScreen(
+    enabled: Boolean,
+    signalingState: String,
+    iceState: String,
+    onOpenSettings: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -71,6 +79,8 @@ private fun MainScreen(enabled: Boolean, onOpenSettings: () -> Unit) {
     ) {
         Text(text = "TongHua Managed VoIP", style = MaterialTheme.typography.headlineSmall)
         Text(text = "PhoneAccount enabled: $enabled")
+        Text(text = "Signaling state: $signalingState")
+        Text(text = "ICE state: $iceState")
         Button(onClick = onOpenSettings) {
             Text("Open phone account settings")
         }
