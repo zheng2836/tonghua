@@ -14,10 +14,10 @@ const (
 )
 
 type Session struct {
-	CallID      string `json:"callId"`
-	CallerID    string `json:"callerId"`
-	CalleeID    string `json:"calleeId"`
-	CurrentState State `json:"currentState"`
+	CallID       string `json:"callId"`
+	CallerID     string `json:"callerId"`
+	CalleeID     string `json:"calleeId"`
+	CurrentState State  `json:"currentState"`
 }
 
 type Store struct {
@@ -51,4 +51,14 @@ func (s *Store) UpdateState(callID string, state State) {
 	}
 	session.CurrentState = state
 	s.sessions[callID] = session
+}
+
+func (s *Store) List() []Session {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]Session, 0, len(s.sessions))
+	for _, session := range s.sessions {
+		result = append(result, session)
+	}
+	return result
 }
