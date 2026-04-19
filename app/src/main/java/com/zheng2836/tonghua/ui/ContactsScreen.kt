@@ -34,16 +34,19 @@ import com.zheng2836.tonghua.contacts.VirtualContact
 @Composable
 fun ContactsScreen(
     myVirtualNumber: String,
+    serverHttpBaseUrl: String,
     contacts: List<VirtualContact>,
     phoneAccountEnabled: Boolean,
     onOpenSettings: () -> Unit,
     onEditMyNumber: (String) -> Unit,
+    onEditServerHttpBaseUrl: (String) -> Unit,
     onAddContact: (String, String) -> Unit,
     onDial: (VirtualContact) -> Unit,
     onUpdateVirtualNumber: (String, String) -> Unit
 ) {
     var editingContact by remember { mutableStateOf<VirtualContact?>(null) }
     var editingSelf by remember { mutableStateOf(false) }
+    var editingServer by remember { mutableStateOf(false) }
     var addingContact by remember { mutableStateOf(false) }
 
     Surface(
@@ -60,6 +63,10 @@ fun ContactsScreen(
                 myVirtualNumber = myVirtualNumber,
                 onEdit = { editingSelf = true }
             )
+            ServerCard(
+                serverHttpBaseUrl = serverHttpBaseUrl,
+                onEdit = { editingServer = true }
+            )
             ContactList(
                 contacts = contacts,
                 onDial = onDial,
@@ -72,6 +79,7 @@ fun ContactsScreen(
                 title = "编辑虚拟号码",
                 name = contact.name,
                 initialValue = contact.virtualNumber,
+                label = "服务器虚拟号码",
                 onDismiss = { editingContact = null },
                 onSave = { value ->
                     onUpdateVirtualNumber(contact.id, value)
@@ -85,10 +93,25 @@ fun ContactsScreen(
                 title = "编辑我的号码",
                 name = "当前设备",
                 initialValue = myVirtualNumber,
+                label = "服务器虚拟号码",
                 onDismiss = { editingSelf = false },
                 onSave = { value ->
                     onEditMyNumber(value)
                     editingSelf = false
+                }
+            )
+        }
+
+        if (editingServer) {
+            EditVirtualNumberDialog(
+                title = "编辑服务器地址",
+                name = "HTTP Base URL",
+                initialValue = serverHttpBaseUrl,
+                label = "例如 http://joker404.xyz",
+                onDismiss = { editingServer = false },
+                onSave = { value ->
+                    onEditServerHttpBaseUrl(value)
+                    editingServer = false
                 }
             )
         }
@@ -166,6 +189,36 @@ private fun SelfNumberCard(
     }
 }
 
+@Composable
+private fun ServerCard(
+    serverHttpBaseUrl: String,
+    onEdit: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = "服务器",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = serverHttpBaseUrl,
+                color = Color(0xFF7E7E7E),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+        TextButton(onClick = onEdit) {
+            Text("编辑")
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ContactList(
@@ -228,6 +281,7 @@ private fun EditVirtualNumberDialog(
     title: String,
     name: String,
     initialValue: String,
+    label: String,
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
 ) {
@@ -243,7 +297,7 @@ private fun EditVirtualNumberDialog(
                     value = value,
                     onValueChange = { value = it },
                     singleLine = true,
-                    label = { Text("服务器虚拟号码") }
+                    label = { Text(label) }
                 )
             }
         },
