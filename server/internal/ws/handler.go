@@ -48,6 +48,20 @@ func Handler(hub *Hub, store *calls.Store) http.HandlerFunc {
 				continue
 			}
 
+			if string(msg.Type) == "ping" {
+				pong, _ := json.Marshal(map[string]any{
+					"type": "pong",
+					"callId": "",
+					"data": map[string]string{},
+				})
+				_ = client.Send(pong)
+				continue
+			}
+
+			if string(msg.Type) == "pong" {
+				continue
+			}
+
 			applyState(store, userID, msg)
 
 			targetUserID := msg.Data["targetUserId"]
