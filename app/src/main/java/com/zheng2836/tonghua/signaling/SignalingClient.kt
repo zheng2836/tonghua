@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.zheng2836.tonghua.config.AppConfigRepository
 import com.zheng2836.tonghua.data.CallSession
 import com.zheng2836.tonghua.data.CallState
 import com.zheng2836.tonghua.data.CallStore
@@ -26,8 +27,6 @@ class SignalingClient(
 ) {
     companion object {
         private const val TAG = "Signal"
-        private const val DEV_HTTP_BASE_URL = "http://10.0.2.2:8080"
-        private const val DEV_WS_BASE_URL = "ws://10.0.2.2:8080/ws"
         private const val RECONNECT_DELAY_MS = 3000L
         private const val PING_INTERVAL_MS = 15000L
     }
@@ -37,6 +36,7 @@ class SignalingClient(
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
     private var webRtcEngine: WebRtcEngine? = null
     private val identityRepository = IdentityRepository(context)
+    private val appConfigRepository = AppConfigRepository(context)
     private val userId: String
         get() = identityRepository.getMyVirtualNumber()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -74,7 +74,7 @@ class SignalingClient(
         connectionState = "connecting"
         mainHandler.removeCallbacks(reconnectRunnable)
         val request = Request.Builder()
-            .url("$DEV_WS_BASE_URL?userId=$userId")
+            .url(appConfigRepository.getServerWsBaseUrl() + "?userId=$userId")
             .build()
         webSocket = client.newWebSocket(request, SignalingSocketListener())
     }
@@ -98,7 +98,7 @@ class SignalingClient(
             .toRequestBody(jsonMediaType)
 
         val request = Request.Builder()
-            .url("$DEV_HTTP_BASE_URL/devices/register")
+            .url(appConfigRepository.getServerHttpBaseUrl() + "/devices/register")
             .post(body)
             .build()
 
