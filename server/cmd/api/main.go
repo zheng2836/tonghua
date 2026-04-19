@@ -6,6 +6,7 @@ import (
     "net/http"
 
     "tonghua/server/internal/calls"
+    "tonghua/server/internal/devices"
     "tonghua/server/internal/ws"
 )
 
@@ -22,6 +23,7 @@ type deviceRegisterRequest struct {
 func main() {
     mux := http.NewServeMux()
     callStore := calls.NewStore()
+    deviceStore := devices.NewStore()
     hub := ws.NewHub()
 
     mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -37,6 +39,14 @@ func main() {
         })
     })
 
+    mux.HandleFunc("/debug/devices", func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Content-Type", "application/json")
+        _ = json.NewEncoder(w).Encode(map[string]any{
+            "ok": true,
+            "devices": deviceStore.List(),
+        })
+    })
+
     mux.HandleFunc("/devices/register", func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodPost {
             http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -49,10 +59,17 @@ func main() {
             return
         }
 
+        deviceStore.Put(devices.Device{
+            UserID:   req.UserID,
+            DeviceID: req.DeviceID,
+            FCMToken: req.FCMToken,
+        })
+
         w.Header().Set("Content-Type", "application/json")
         _ = json.NewEncoder(w).Encode(map[string]any{
             "ok": true,
             "deviceId": req.DeviceID,
+            "userId": req.UserID,
         })
     })
 
