@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import com.zheng2836.tonghua.config.AppConfigRepository
 import com.zheng2836.tonghua.contacts.ContactRepository
 import com.zheng2836.tonghua.identity.IdentityRepository
 import com.zheng2836.tonghua.telecom.PhoneAccountRegistrar
@@ -29,14 +30,17 @@ class MainActivity : ComponentActivity() {
         requestNeededPermissions()
 
         setContent {
+            val appConfigRepository = remember { AppConfigRepository(this) }
             val contactRepository = remember { ContactRepository(this) }
             val identityRepository = remember { IdentityRepository(this) }
             var contacts by remember { mutableStateOf(contactRepository.loadContacts()) }
             var myVirtualNumber by remember { mutableStateOf(identityRepository.getMyVirtualNumber()) }
+            var serverHttpBaseUrl by remember { mutableStateOf(appConfigRepository.getServerHttpBaseUrl()) }
 
             MaterialTheme {
                 ContactsScreen(
                     myVirtualNumber = myVirtualNumber,
+                    serverHttpBaseUrl = serverHttpBaseUrl,
                     contacts = contacts,
                     phoneAccountEnabled = PhoneAccountRegistrar.isEnabled(this),
                     onOpenSettings = {
@@ -46,6 +50,10 @@ class MainActivity : ComponentActivity() {
                     onEditMyNumber = { value ->
                         identityRepository.setMyVirtualNumber(value)
                         myVirtualNumber = identityRepository.getMyVirtualNumber()
+                    },
+                    onEditServerHttpBaseUrl = { value ->
+                        appConfigRepository.setServerHttpBaseUrl(value)
+                        serverHttpBaseUrl = appConfigRepository.getServerHttpBaseUrl()
                     },
                     onAddContact = { name, number ->
                         contacts = contactRepository.addContact(name, number)
