@@ -7,6 +7,7 @@ import com.zheng2836.tonghua.data.CallSession
 import com.zheng2836.tonghua.data.CallState
 import com.zheng2836.tonghua.data.CallStore
 import com.zheng2836.tonghua.telecom.ConnectionRegistry
+import com.zheng2836.tonghua.webrtc.WebRtcEngine
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -30,6 +31,7 @@ class SignalingClient(
     private val client = OkHttpClient()
     private var webSocket: WebSocket? = null
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
+    private var webRtcEngine: WebRtcEngine? = null
     private val userId: String by lazy {
         Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
             ?: "android-debug"
@@ -38,6 +40,10 @@ class SignalingClient(
     @Volatile
     var connectionState: String = "idle"
         private set
+
+    fun attachWebRtcEngine(engine: WebRtcEngine) {
+        webRtcEngine = engine
+    }
 
     fun connect() {
         if (webSocket != null) return
@@ -133,6 +139,18 @@ class SignalingClient(
         Log.i(TAG, "call.unhold $callId")
     }
 
+    fun sendWebRtcOffer(callId: String, targetUserId: String, sdp: String) {
+        sendMessage("webrtc.offer", callId, targetUserId, mapOf("sdp" to sdp))
+    }
+
+    fun sendWebRtcAnswer(callId: String, targetUserId: String, sdp: String) {
+        sendMessage("webrtc.answer", callId, targetUserId, mapOf("sdp" to sdp))
+    }
+
+    fun sendWebRtcIce(callId: String, targetUserId: String, candidate: String) {
+        sendMessage("webrtc.ice", callId, targetUserId, mapOf("candidate" to candidate))
+    }
+
     fun onRemoteAnswered(callId: String) {
         callStore.updateState(callId, CallState.ACTIVE)
         connectionRegistry.get(callId)?.onRemoteAnswered()
@@ -209,12 +227,16 @@ class SignalingClient(
         val json = JSONObject(text)
         val type = json.optString("type")
         val callId = json.optString("callId")
+        val data = json.optJSONObject("data")
 
         when (type) {
             "call.ringing" -> callStore.updateState(callId, CallState.RINGING)
             "call.answer" -> onRemoteAnswered(callId)
             "call.reject" -> onRemoteRejected(callId)
             "call.hangup", "call.cancel" -> onRemoteHangup(callId)
+            "webrtc.offer" -> webRtcEngine?.onRemoteOffer(callId, data?.optString("sdp").orEmpty())
+            "webrtc.answer" -> webRtcEngine?.onRemoteAnswer(callId, data?.optString("sdp").orEmpty())
+            "webrtc.ice" -> webRtcEngine?.onRemoteIce(callId, data?.optString("candidate").orEmpty())
         }
     }
 }
