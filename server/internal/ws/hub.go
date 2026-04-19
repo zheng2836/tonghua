@@ -1,9 +1,21 @@
 package ws
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/gorilla/websocket"
+)
 
 type Client struct {
 	UserID string
+	Conn   *websocket.Conn
+	Mu     sync.Mutex
+}
+
+func (c *Client) Send(message []byte) error {
+	c.Mu.Lock()
+	defer c.Mu.Unlock()
+	return c.Conn.WriteMessage(websocket.TextMessage, message)
 }
 
 type Hub struct {
@@ -32,4 +44,14 @@ func (h *Hub) Has(userID string) bool {
 	defer h.mu.RUnlock()
 	_, ok := h.clients[userID]
 	return ok
+}
+
+func (h *Hub) SendTo(userID string, message []byte) error {
+	h.mu.RLock()
+	client, ok := h.clients[userID]
+	h.mu.RUnlock()
+	if !ok {
+		return nil
+	}
+	return client.Send(message)
 }
