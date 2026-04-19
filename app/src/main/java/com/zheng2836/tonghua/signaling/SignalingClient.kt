@@ -1,11 +1,11 @@
 package com.zheng2836.tonghua.signaling
 
 import android.content.Context
-import android.provider.Settings
 import android.util.Log
 import com.zheng2836.tonghua.data.CallSession
 import com.zheng2836.tonghua.data.CallState
 import com.zheng2836.tonghua.data.CallStore
+import com.zheng2836.tonghua.identity.IdentityRepository
 import com.zheng2836.tonghua.telecom.ConnectionRegistry
 import com.zheng2836.tonghua.webrtc.WebRtcEngine
 import okhttp3.MediaType.Companion.toMediaType
@@ -32,10 +32,9 @@ class SignalingClient(
     private var webSocket: WebSocket? = null
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
     private var webRtcEngine: WebRtcEngine? = null
-    private val userId: String by lazy {
-        Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-            ?: "android-debug"
-    }
+    private val identityRepository = IdentityRepository(context)
+    private val userId: String
+        get() = identityRepository.getMyVirtualNumber()
 
     @Volatile
     var connectionState: String = "idle"
