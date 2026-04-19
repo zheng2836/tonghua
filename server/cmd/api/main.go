@@ -4,6 +4,9 @@ import (
     "encoding/json"
     "log"
     "net/http"
+
+    "tonghua/server/internal/calls"
+    "tonghua/server/internal/ws"
 )
 
 type healthResponse struct {
@@ -18,6 +21,8 @@ type deviceRegisterRequest struct {
 
 func main() {
     mux := http.NewServeMux()
+    callStore := calls.NewStore()
+    hub := ws.NewHub()
 
     mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
         w.Header().Set("Content-Type", "application/json")
@@ -43,9 +48,7 @@ func main() {
         })
     })
 
-    mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-        http.Error(w, "websocket scaffold not implemented yet", http.StatusNotImplemented)
-    })
+    mux.HandleFunc("/ws", ws.Handler(hub, callStore))
 
     log.Println("tonghua api listening on :8080")
     log.Fatal(http.ListenAndServe(":8080", mux))
