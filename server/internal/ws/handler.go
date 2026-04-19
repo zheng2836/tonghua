@@ -7,6 +7,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"tonghua/server/internal/calls"
+	"tonghua/server/internal/devices"
+	"tonghua/server/internal/push"
 	"tonghua/server/internal/signaling"
 )
 
@@ -14,7 +16,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-func Handler(hub *Hub, store *calls.Store) http.HandlerFunc {
+func Handler(hub *Hub, callStore *calls.Store, deviceStore *devices.Store, sender *push.Sender) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := r.URL.Query().Get("userId")
 		if userID == "" {
@@ -62,11 +64,25 @@ func Handler(hub *Hub, store *calls.Store) http.HandlerFunc {
 				continue
 			}
 
-			applyState(store, userID, msg)
+			applyState(callStore, userID, msg)
 
 			targetUserID := msg.Data["targetUserId"]
 			if targetUserID == "" {
 				continue
+			}
+
+			if msg.Type == signaling.EventCallInvite && !hub.Has(targetUserID) {
+				if device, ok := deviceStore.Get(targetUserID); ok && device.FCMToken != "" {
+					callerName := msg.Data["callerName"]
+					if err := sender.SendIncomingCall(push.IncomingCallPayload{
+						Token:      device.FCMToken,
+						CallID:     msg.CallID,
+						CallerID:   userID,
+						CallerName: callerName,
+					}); err != nil {
+						log.Printf("push invite failed caller=%s callee=%s err=%v", userID, targetUserID, err)
+					}
+				}
 			}
 
 			if err := hub.SendTo(targetUserID, data); err != nil {
