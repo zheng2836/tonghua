@@ -27,7 +27,7 @@ object AppGraph {
         callStore = CallStore()
         connectionRegistry = ConnectionRegistry()
         signalingClient = SignalingClient(appContext, callStore, connectionRegistry)
-        webRtcEngine = WebRtcEngine(callStore)
+        webRtcEngine = WebRtcEngine(appContext, callStore)
         signalingClient.attachWebRtcEngine(webRtcEngine)
         webRtcEngine.attachSignalingClient(signalingClient)
     }
