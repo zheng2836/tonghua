@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
                     enabled = PhoneAccountRegistrar.isEnabled(this),
                     signalingState = AppGraph.signalingClient.connectionState,
                     iceState = AppGraph.webRtcEngine.iceState,
+                    lastSignal = AppGraph.webRtcEngine.lastSignal,
                     onOpenSettings = {
                         PhoneAccountRegistrar.registerIfNeeded(this)
                         PhoneAccountRegistrar.openPhoneAccountSettings(this)
@@ -69,6 +70,7 @@ private fun MainScreen(
     enabled: Boolean,
     signalingState: String,
     iceState: String,
+    lastSignal: String,
     onOpenSettings: () -> Unit
 ) {
     Column(
@@ -81,6 +83,7 @@ private fun MainScreen(
         Text(text = "PhoneAccount enabled: $enabled")
         Text(text = "Signaling state: $signalingState")
         Text(text = "ICE state: $iceState")
+        Text(text = "Last WebRTC signal: $lastSignal")
         Button(onClick = onOpenSettings) {
             Text("Open phone account settings")
         }
