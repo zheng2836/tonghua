@@ -26,7 +26,7 @@ func (s *Sender) SendIncomingCall(payload IncomingCallPayload) error {
 	s.mu.Lock()
 	s.history = append(s.history, payload)
 	s.mu.Unlock()
-	return nil
+	return s.sendIncomingCallFCM(payload)
 }
 
 func (s *Sender) History() []IncomingCallPayload {
