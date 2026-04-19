@@ -1,6 +1,8 @@
 package com.zheng2836.tonghua.signaling
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.zheng2836.tonghua.data.CallSession
 import com.zheng2836.tonghua.data.CallState
@@ -26,6 +28,8 @@ class SignalingClient(
         private const val TAG = "Signal"
         private const val DEV_HTTP_BASE_URL = "http://10.0.2.2:8080"
         private const val DEV_WS_BASE_URL = "ws://10.0.2.2:8080/ws"
+        private const val RECONNECT_DELAY_MS = 3000L
+        private const val PING_INTERVAL_MS = 15000L
     }
 
     private val client = OkHttpClient()
@@ -35,6 +39,26 @@ class SignalingClient(
     private val identityRepository = IdentityRepository(context)
     private val userId: String
         get() = identityRepository.getMyVirtualNumber()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var manuallyClosed = false
+    private val reconnectRunnable = Runnable {
+        if (!manuallyClosed && webSocket == null) {
+            connect()
+        }
+    }
+    private val pingRunnable = object : Runnable {
+        override fun run() {
+            if (webSocket != null && connectionState == "connected") {
+                val payload = JSONObject()
+                    .put("type", "ping")
+                    .put("callId", "")
+                    .put("data", JSONObject())
+                    .toString()
+                webSocket?.send(payload)
+                mainHandler.postDelayed(this, PING_INTERVAL_MS)
+            }
+        }
+    }
 
     @Volatile
     var connectionState: String = "idle"
@@ -46,7 +70,9 @@ class SignalingClient(
 
     fun connect() {
         if (webSocket != null) return
+        manuallyClosed = false
         connectionState = "connecting"
+        mainHandler.removeCallbacks(reconnectRunnable)
         val request = Request.Builder()
             .url("$DEV_WS_BASE_URL?userId=$userId")
             .build()
@@ -54,6 +80,9 @@ class SignalingClient(
     }
 
     fun disconnect() {
+        manuallyClosed = true
+        mainHandler.removeCallbacks(reconnectRunnable)
+        mainHandler.removeCallbacks(pingRunnable)
         webSocket?.close(1000, "client closing")
         webSocket = null
         connectionState = "closed"
@@ -193,10 +222,18 @@ class SignalingClient(
         Log.i(TAG, "send type=$type callId=$callId ok=$sent")
     }
 
+    private fun scheduleReconnect() {
+        if (manuallyClosed) return
+        mainHandler.removeCallbacks(reconnectRunnable)
+        mainHandler.postDelayed(reconnectRunnable, RECONNECT_DELAY_MS)
+    }
+
     private inner class SignalingSocketListener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             connectionState = "connected"
             Log.i(TAG, "ws connected")
+            mainHandler.removeCallbacks(pingRunnable)
+            mainHandler.postDelayed(pingRunnable, PING_INTERVAL_MS)
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
@@ -206,19 +243,24 @@ class SignalingClient(
 
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
             connectionState = "closing"
+            mainHandler.removeCallbacks(pingRunnable)
             webSocket.close(code, reason)
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
             connectionState = "closed"
+            mainHandler.removeCallbacks(pingRunnable)
             this@SignalingClient.webSocket = null
+            scheduleReconnect()
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             connectionState = "failed"
             Log.e(TAG, "ws failed", t)
+            mainHandler.removeCallbacks(pingRunnable)
             this@SignalingClient.webSocket = null
             response?.close()
+            scheduleReconnect()
         }
     }
 
@@ -229,6 +271,7 @@ class SignalingClient(
         val data = json.optJSONObject("data")
 
         when (type) {
+            "pong" -> Log.d(TAG, "ws pong")
             "call.ringing" -> callStore.updateState(callId, CallState.RINGING)
             "call.answer" -> onRemoteAnswered(callId)
             "call.reject" -> onRemoteRejected(callId)
