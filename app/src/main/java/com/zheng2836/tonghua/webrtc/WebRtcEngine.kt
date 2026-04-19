@@ -1,19 +1,19 @@
 package com.zheng2836.tonghua.webrtc
 
 import android.content.Context
-import android.util.Log
+import com.zheng2836.tonghua.config.AppConfigRepository
 import com.zheng2836.tonghua.data.CallState
 import com.zheng2836.tonghua.data.CallStore
 import com.zheng2836.tonghua.signaling.SignalingClient
 import org.json.JSONObject
 import org.webrtc.AudioSource
 import org.webrtc.AudioTrack
+import org.webrtc.IceCandidate
 import org.webrtc.MediaConstraints
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
-import org.webrtc.SessionDescription
 import org.webrtc.SdpObserver
-import org.webrtc.IceCandidate
+import org.webrtc.SessionDescription
 import org.webrtc.audio.JavaAudioDeviceModule
 import java.util.concurrent.ConcurrentHashMap
 
@@ -30,6 +30,7 @@ class WebRtcEngine(
         private set
 
     private var signalingClient: SignalingClient? = null
+    private val configRepository = AppConfigRepository(context)
     private val peerConnections = ConcurrentHashMap<String, PeerConnection>()
     private val peerFactory: PeerConnectionFactory
     private val localAudioSource: AudioSource
@@ -126,8 +127,7 @@ class WebRtcEngine(
         val session = callStore.get(callId) ?: return
         val pc = ensurePeerConnection(callId, session.peerId) ?: return
         lastSignal = "remote_ice"
-        val ice = parseIceCandidate(candidate)
-        pc.addIceCandidate(ice)
+        pc.addIceCandidate(parseIceCandidate(candidate))
         if (iceState == "new") {
             iceState = "checking"
         }
@@ -141,9 +141,7 @@ class WebRtcEngine(
 
     private fun ensurePeerConnection(callId: String, peerId: String): PeerConnection? {
         peerConnections[callId]?.let { return it }
-        val rtcConfig = PeerConnection.RTCConfiguration(
-            listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
-        ).apply {
+        val rtcConfig = PeerConnection.RTCConfiguration(buildIceServers()).apply {
             sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
         }
         val pc = peerFactory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
@@ -168,6 +166,27 @@ class WebRtcEngine(
         pc.addTrack(audioTrack, listOf("stream_$callId"))
         peerConnections[callId] = pc
         return pc
+    }
+
+    private fun buildIceServers(): List<PeerConnection.IceServer> {
+        val servers = mutableListOf<PeerConnection.IceServer>()
+        val stun = configRepository.getStunServerUrl()
+        if (stun.isNotBlank()) {
+            servers += PeerConnection.IceServer.builder(stun).createIceServer()
+        }
+        val turn = configRepository.getTurnServerUrl()
+        if (turn.isNotBlank()) {
+            val builder = PeerConnection.IceServer.builder(turn)
+            val user = configRepository.getTurnUsername()
+            val pass = configRepository.getTurnPassword()
+            if (user.isNotBlank()) builder.setUsername(user)
+            if (pass.isNotBlank()) builder.setPassword(pass)
+            servers += builder.createIceServer()
+        }
+        if (servers.isEmpty()) {
+            servers += PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
+        }
+        return servers
     }
 
     private fun audioOnlyConstraints(): MediaConstraints {
