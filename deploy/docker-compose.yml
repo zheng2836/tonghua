@@ -1,6 +1,19 @@
 services:
+  api:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    container_name: tonghua-api
+    restart: unless-stopped
+    env_file:
+      - ./server.env
+    ports:
+      - "8080:8080"
+
   postgres:
     image: postgres:16
+    container_name: tonghua-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: tonghua
       POSTGRES_USER: tonghua
@@ -10,12 +23,21 @@ services:
 
   redis:
     image: redis:7
+    container_name: tonghua-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
 
   coturn:
     image: coturn/coturn:4.6.2
-    command: ["-n", "--log-file=stdout", "--lt-cred-mech", "--realm=tonghua.local"]
+    container_name: tonghua-coturn
+    restart: unless-stopped
+    command:
+      - -c
+      - /etc/coturn/turnserver.conf
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
     ports:
       - "3478:3478"
       - "3478:3478/udp"
+      - "49160-49200:49160-49200/udp"
