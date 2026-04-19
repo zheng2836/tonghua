@@ -7,6 +7,7 @@ import (
 
     "tonghua/server/internal/calls"
     "tonghua/server/internal/devices"
+    "tonghua/server/internal/push"
     "tonghua/server/internal/ws"
 )
 
@@ -24,6 +25,7 @@ func main() {
     mux := http.NewServeMux()
     callStore := calls.NewStore()
     deviceStore := devices.NewStore()
+    sender := push.NewSender()
     hub := ws.NewHub()
 
     mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +75,7 @@ func main() {
         })
     })
 
-    mux.HandleFunc("/ws", ws.Handler(hub, callStore))
+    mux.HandleFunc("/ws", ws.Handler(hub, callStore, deviceStore, sender))
 
     log.Println("tonghua api listening on :8080")
     log.Fatal(http.ListenAndServe(":8080", mux))
