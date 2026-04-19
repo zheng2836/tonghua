@@ -31,9 +31,20 @@ class ContactRepository(context: Context) {
         }
     }
 
+    fun addContact(name: String, virtualNumber: String): List<VirtualContact> {
+        val contact = VirtualContact(
+            id = UUID.randomUUID().toString(),
+            name = name.trim(),
+            virtualNumber = virtualNumber.trim()
+        )
+        val updated = loadContacts() + contact
+        saveContacts(updated)
+        return updated
+    }
+
     fun updateVirtualNumber(contactId: String, virtualNumber: String): List<VirtualContact> {
         val updated = loadContacts().map {
-            if (it.id == contactId) it.copy(virtualNumber = virtualNumber) else it
+            if (it.id == contactId) it.copy(virtualNumber = virtualNumber.trim()) else it
         }
         saveContacts(updated)
         return updated
