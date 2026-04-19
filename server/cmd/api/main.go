@@ -29,6 +29,14 @@ func main() {
         _ = json.NewEncoder(w).Encode(healthResponse{OK: true})
     })
 
+    mux.HandleFunc("/debug/calls", func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Content-Type", "application/json")
+        _ = json.NewEncoder(w).Encode(map[string]any{
+            "ok": true,
+            "calls": callStore.List(),
+        })
+    })
+
     mux.HandleFunc("/devices/register", func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodPost {
             http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
