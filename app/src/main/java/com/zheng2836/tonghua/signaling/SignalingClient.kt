@@ -5,11 +5,14 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.zheng2836.tonghua.config.AppConfigRepository
+import com.zheng2836.tonghua.data.CallDirection
 import com.zheng2836.tonghua.data.CallSession
 import com.zheng2836.tonghua.data.CallState
 import com.zheng2836.tonghua.data.CallStore
 import com.zheng2836.tonghua.identity.IdentityRepository
 import com.zheng2836.tonghua.telecom.ConnectionRegistry
+import com.zheng2836.tonghua.telecom.PhoneAccountRegistrar
+import com.zheng2836.tonghua.telecom.TelecomFacade
 import com.zheng2836.tonghua.webrtc.WebRtcEngine
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -303,6 +306,7 @@ class SignalingClient(
 
         when (type) {
             "pong" -> Log.d(TAG, "ws pong")
+            "call.invite" -> handleIncomingInvite(callId, data)
             "call.ringing" -> callStore.updateState(callId, CallState.RINGING)
             "call.answer" -> onRemoteAnswered(callId)
             "call.reject" -> onRemoteRejected(callId)
@@ -313,6 +317,33 @@ class SignalingClient(
                 connectionRegistry.get(callId)?.onMediaConnected()
             }
             "webrtc.ice" -> webRtcEngine?.onRemoteIce(callId, data?.optString("candidate").orEmpty())
+        }
+    }
+
+    private fun handleIncomingInvite(callId: String, data: JSONObject?) {
+        if (callId.isBlank()) return
+        val callerId = data?.optString("callerId").orEmpty().ifBlank { "unknown" }
+        val callerName = data?.optString("callerName").orEmpty().ifBlank { callerId }
+
+        callStore.put(
+            CallSession(
+                callId = callId,
+                peerId = callerId,
+                peerDisplayName = callerName,
+                direction = CallDirection.INCOMING,
+                state = CallState.RINGING
+            )
+        )
+
+        PhoneAccountRegistrar.registerIfNeeded(context)
+        if (!PhoneAccountRegistrar.isEnabled(context)) {
+            reportIncomingEscalationFailed(callId, "phone_account_not_enabled")
+            return
+        }
+
+        val ok = TelecomFacade.addIncomingCall(context, callId, callerId, callerName)
+        if (!ok) {
+            reportIncomingEscalationFailed(callId, "add_incoming_call_failed")
         }
     }
 }
