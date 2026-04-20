@@ -10,8 +10,9 @@ object TelecomFacade {
     const val EXTRA_PEER_ID = "x_peer_id"
     const val EXTRA_PEER_NAME = "x_peer_name"
 
-    fun placeOutgoingCall(context: Context, callId: String, peerId: String, peerName: String) {
-        val telecom = context.getSystemService(TelecomManager::class.java)
+    fun placeOutgoingCall(context: Context, callId: String, peerId: String, peerName: String): Boolean {
+        val telecom = runCatching { context.getSystemService(TelecomManager::class.java) }.getOrNull()
+            ?: return false
         val uri: Uri = PhoneAccountRegistrar.buildPeerUri(peerId)
         val extras = Bundle().apply {
             putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, PhoneAccountRegistrar.phoneAccountHandle(context))
@@ -20,17 +21,24 @@ object TelecomFacade {
             putString(EXTRA_PEER_NAME, peerName)
             putBoolean(TelecomManager.EXTRA_START_CALL_WITH_SPEAKERPHONE, false)
         }
-        telecom.placeCall(uri, extras)
+        return runCatching {
+            telecom.placeCall(uri, extras)
+            true
+        }.getOrDefault(false)
     }
 
-    fun addIncomingCall(context: Context, callId: String, callerId: String, callerName: String) {
-        val telecom = context.getSystemService(TelecomManager::class.java)
+    fun addIncomingCall(context: Context, callId: String, callerId: String, callerName: String): Boolean {
+        val telecom = runCatching { context.getSystemService(TelecomManager::class.java) }.getOrNull()
+            ?: return false
         val extras = Bundle().apply {
             putParcelable(TelecomManager.EXTRA_INCOMING_CALL_ADDRESS, PhoneAccountRegistrar.buildPeerUri(callerId))
             putString(EXTRA_CALL_ID, callId)
             putString(EXTRA_PEER_ID, callerId)
             putString(EXTRA_PEER_NAME, callerName)
         }
-        telecom.addNewIncomingCall(PhoneAccountRegistrar.phoneAccountHandle(context), extras)
+        return runCatching {
+            telecom.addNewIncomingCall(PhoneAccountRegistrar.phoneAccountHandle(context), extras)
+            true
+        }.getOrDefault(false)
     }
 }
