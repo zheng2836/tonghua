@@ -165,12 +165,12 @@ internal class RealRtcCore(context: Context, private val store: CallStore) {
 
             override fun onIceConnectionReceivingChange(receiving: Boolean) {}
             override fun onIceGatheringChange(s: PeerConnection.IceGatheringState) {}
-            override fun onIceCandidatesRemoved(c: Array<IceCandidate>) {}
+            override fun onIceCandidatesRemoved(c: Array<out IceCandidate>) {}
             override fun onAddStream(s: MediaStream) {}
             override fun onRemoveStream(s: MediaStream) {}
             override fun onDataChannel(d: DataChannel) {}
             override fun onRenegotiationNeeded() {}
-            override fun onAddTrack(r: RtpReceiver, m: Array<MediaStream>) {}
+            override fun onAddTrack(r: RtpReceiver, m: Array<out MediaStream>) {}
         }) ?: return null
         pc.addTrack(tr, listOf("stream-$callId"))
         return Rt(pc, src, tr).also {
