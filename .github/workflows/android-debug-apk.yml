@@ -22,8 +22,10 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - name: Install Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
 
       - name: Ensure wrapper exists
         run: |
@@ -33,7 +35,7 @@ jobs:
           chmod +x gradlew
 
       - name: Build debug apk
-        run: ./gradlew :app:assembleDebug
+        run: ./gradlew :app:assembleDebug --stacktrace
 
       - name: Upload apk artifact
         uses: actions/upload-artifact@v4
