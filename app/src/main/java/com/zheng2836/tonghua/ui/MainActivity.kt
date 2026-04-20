@@ -25,8 +25,11 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { }
 
+    private val phoneAccountEnabledState = mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        phoneAccountEnabledState.value = PhoneAccountRegistrar.isEnabled(this)
         requestNeededPermissions()
 
         setContent {
@@ -36,13 +39,14 @@ class MainActivity : ComponentActivity() {
             var contacts by remember { mutableStateOf(contactRepository.loadContacts()) }
             var myVirtualNumber by remember { mutableStateOf(identityRepository.getMyVirtualNumber()) }
             var serverHttpBaseUrl by remember { mutableStateOf(appConfigRepository.getServerHttpBaseUrl()) }
+            val phoneAccountEnabled by remember { phoneAccountEnabledState }
 
             MaterialTheme {
                 ContactsScreen(
                     myVirtualNumber = myVirtualNumber,
                     serverHttpBaseUrl = serverHttpBaseUrl,
                     contacts = contacts,
-                    phoneAccountEnabled = PhoneAccountRegistrar.isEnabled(this),
+                    phoneAccountEnabled = phoneAccountEnabled,
                     onOpenSettings = {
                         PhoneAccountRegistrar.registerIfNeeded(this)
                         PhoneAccountRegistrar.openPhoneAccountSettings(this)
@@ -72,6 +76,11 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        phoneAccountEnabledState.value = PhoneAccountRegistrar.isEnabled(this)
     }
 
     private fun requestNeededPermissions() {
