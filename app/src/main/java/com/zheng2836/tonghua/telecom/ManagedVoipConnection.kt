@@ -67,12 +67,16 @@ class ManagedVoipConnection(
     fun onRemoteAnswered() {
         AppGraph.webRtcEngine.startOutgoing(callId) { ok ->
             if (ok) {
-                AppGraph.callStore.updateState(callId, CallState.ACTIVE)
-                setActive()
+                AppGraph.callStore.updateState(callId, CallState.CONNECTING)
             } else {
                 failAndDestroy("webrtc_offer_failed")
             }
         }
+    }
+
+    fun onMediaConnected() {
+        AppGraph.callStore.updateState(callId, CallState.ACTIVE)
+        setActive()
     }
 
     fun onRemoteRejected() {
