@@ -182,7 +182,7 @@ class SignalingClient(
     }
 
     fun onRemoteAnswered(callId: String) {
-        callStore.updateState(callId, CallState.ACTIVE)
+        callStore.updateState(callId, CallState.CONNECTING)
         connectionRegistry.get(callId)?.onRemoteAnswered()
     }
 
@@ -308,7 +308,10 @@ class SignalingClient(
             "call.reject" -> onRemoteRejected(callId)
             "call.hangup", "call.cancel" -> onRemoteHangup(callId)
             "webrtc.offer" -> webRtcEngine?.onRemoteOffer(callId, data?.optString("sdp").orEmpty())
-            "webrtc.answer" -> webRtcEngine?.onRemoteAnswer(callId, data?.optString("sdp").orEmpty())
+            "webrtc.answer" -> {
+                webRtcEngine?.onRemoteAnswer(callId, data?.optString("sdp").orEmpty())
+                connectionRegistry.get(callId)?.onMediaConnected()
+            }
             "webrtc.ice" -> webRtcEngine?.onRemoteIce(callId, data?.optString("candidate").orEmpty())
         }
     }
