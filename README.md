@@ -106,3 +106,7 @@ deploy/
 2. Android `SignalingClient` 换成真实 OkHttp WebSocket。
 3. `WebRtcEngine` 接入真实 PeerConnection。
 4. 把 server push sender 接到 FCM HTTP v1。
+
+## Build trigger
+
+Manual workflow trigger commit for Android debug APK.
