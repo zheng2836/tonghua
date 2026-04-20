@@ -64,7 +64,7 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ## App 内默认配置
 
-- 默认服务器：`http://joker404.xyz`
+- 默认服务器：`https://joker404.xyz`
 - 默认 TURN：`turn:joker404.xyz:3478?transport=udp`
 - App 内可以直接改服务器地址
 
@@ -77,9 +77,15 @@ app/build/outputs/apk/debug/app-debug.apk
 - 虚拟号联系人拨号页
 - managed ConnectionService
 - WebSocket 信令
-- WebRTC 真骨架
+- WebRTC 占位通话链
 - 自动重连 + ping
 - 服务器设备注册 / 调试接口 / push 链
 - CentOS 一键安装脚本
 
-现在真正卡住的不是代码骨架，而是 Firebase 两个真实凭证文件。
+最近一次更新已经处理：
+
+- 删除不可下载的 `google-webrtc` 依赖
+- 替换为可编译的 `WebRtcEngine` 占位实现
+- 延后高风险启动时操作，降低 Android 15 / HyperOS 打开即退概率
+
+现在真正卡住的不是代码骨架，而是 Firebase 两个真实凭证文件和真机联调。
