@@ -24,6 +24,9 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val callerId = data["callerId"] ?: return
         val callerName = data["callerName"] ?: callerId
 
+        AppGraph.signalingClient.connect()
+        PhoneAccountRegistrar.registerIfNeeded(this)
+
         AppGraph.callStore.put(
             CallSession(
                 callId = callId,
@@ -40,6 +43,10 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
-        TelecomFacade.addIncomingCall(this, callId, callerId, callerName)
+        val ok = TelecomFacade.addIncomingCall(this, callId, callerId, callerName)
+        if (!ok) {
+            Log.e("FCM", "add incoming call failed")
+            AppGraph.signalingClient.reportIncomingEscalationFailed(callId, "add_incoming_call_failed")
+        }
     }
 }
