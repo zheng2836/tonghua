@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.telecom.PhoneAccount
 import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
@@ -53,6 +52,20 @@ object PhoneAccountRegistrar {
         }.getOrDefault(false)
     }
 
+    fun isIncomingCallPermitted(context: Context): Boolean {
+        val telecom = telecomManagerOrNull(context) ?: return false
+        return runCatching {
+            telecom.isIncomingCallPermitted(phoneAccountHandle(context))
+        }.getOrDefault(false)
+    }
+
+    fun isOutgoingCallPermitted(context: Context): Boolean {
+        val telecom = telecomManagerOrNull(context) ?: return false
+        return runCatching {
+            telecom.isOutgoingCallPermitted(phoneAccountHandle(context))
+        }.getOrDefault(false)
+    }
+
     fun openPhoneAccountSettings(context: Context): Boolean {
         val intent = Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -70,15 +83,9 @@ object PhoneAccountRegistrar {
     }
 
     private fun canInspectPhoneAccount(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
-        val hasReadPhoneNumbers = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.READ_PHONE_NUMBERS
-        ) == PackageManager.PERMISSION_GRANTED
-        val hasReadPhoneState = ContextCompat.checkSelfPermission(
+        return ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.READ_PHONE_STATE
         ) == PackageManager.PERMISSION_GRANTED
-        return hasReadPhoneNumbers || hasReadPhoneState
     }
 }
