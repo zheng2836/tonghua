@@ -12,7 +12,7 @@ class AppConfigRepository(context: Context) {
     private val turnPassKey = "turn_password"
 
     fun getServerHttpBaseUrl(): String {
-        return prefs.getString(httpKey, "http://joker404.xyz")!!.trim().removeSuffix("/")
+        return prefs.getString(httpKey, "https://joker404.xyz")!!.trim().removeSuffix("/")
     }
 
     fun setServerHttpBaseUrl(value: String) {
