@@ -71,6 +71,18 @@ func Handler(hub *Hub, callStore *calls.Store, deviceStore *devices.Store, sende
 				continue
 			}
 
+			if msg.Type == signaling.EventCallInvite {
+				if msg.Data == nil {
+					msg.Data = map[string]string{}
+				}
+				msg.Data["callerId"] = userID
+				if msg.Data["callerName"] == "" {
+					msg.Data["callerName"] = userID
+				}
+				updated, _ := json.Marshal(msg)
+				data = updated
+			}
+
 			if msg.Type == signaling.EventCallInvite && !hub.Has(targetUserID) {
 				if device, ok := deviceStore.Get(targetUserID); ok && device.FCMToken != "" {
 					callerName := msg.Data["callerName"]
