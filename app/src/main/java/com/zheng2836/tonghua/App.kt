@@ -3,11 +3,13 @@ package com.zheng2836.tonghua
 import android.app.Application
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
+import com.zheng2836.tonghua.telecom.PhoneAccountRegistrar
 
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
         AppGraph.init(this)
+        PhoneAccountRegistrar.registerIfNeeded(this)
         AppGraph.signalingClient.connect()
         runCatching {
             FirebaseMessaging.getInstance().token
