@@ -19,6 +19,7 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONObject
+import java.util.ArrayDeque
 
 class SignalingClient(
     private val context: Context,
@@ -37,6 +38,7 @@ class SignalingClient(
     private var webRtcEngine: WebRtcEngine? = null
     private val identityRepository = IdentityRepository(context)
     private val appConfigRepository = AppConfigRepository(context)
+    private val pendingMessages = ArrayDeque<String>()
     private val userId: String
         get() = identityRepository.getMyVirtualNumber()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -218,8 +220,36 @@ class SignalingClient(
             .put("data", data)
             .toString()
 
+        if (connectionState != "connected" || webSocket == null) {
+            if (pendingMessages.size >= 64) {
+                pendingMessages.removeFirst()
+            }
+            pendingMessages.addLast(payload)
+            connect()
+            Log.i(TAG, "queued type=$type callId=$callId because ws not connected")
+            return
+        }
+
         val sent = webSocket?.send(payload) ?: false
+        if (!sent) {
+            if (pendingMessages.size >= 64) {
+                pendingMessages.removeFirst()
+            }
+            pendingMessages.addLast(payload)
+            connect()
+        }
         Log.i(TAG, "send type=$type callId=$callId ok=$sent")
+    }
+
+    private fun flushPendingMessages() {
+        while (connectionState == "connected" && webSocket != null && pendingMessages.isNotEmpty()) {
+            val payload = pendingMessages.removeFirst()
+            val sent = webSocket?.send(payload) ?: false
+            if (!sent) {
+                pendingMessages.addFirst(payload)
+                break
+            }
+        }
     }
 
     private fun scheduleReconnect() {
@@ -232,6 +262,7 @@ class SignalingClient(
         override fun onOpen(webSocket: WebSocket, response: Response) {
             connectionState = "connected"
             Log.i(TAG, "ws connected")
+            flushPendingMessages()
             mainHandler.removeCallbacks(pingRunnable)
             mainHandler.postDelayed(pingRunnable, PING_INTERVAL_MS)
         }
