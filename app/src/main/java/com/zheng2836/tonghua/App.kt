@@ -10,7 +10,6 @@ class App : Application() {
         super.onCreate()
         AppGraph.init(this)
         PhoneAccountRegistrar.registerIfNeeded(this)
-        AppGraph.signalingClient.connect()
         runCatching {
             FirebaseMessaging.getInstance().token
                 .addOnSuccessListener { token ->
