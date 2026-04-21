@@ -13,6 +13,7 @@ object TelecomFacade {
     fun placeOutgoingCall(context: Context, callId: String, peerId: String, peerName: String): Boolean {
         val telecom = runCatching { context.getSystemService(TelecomManager::class.java) }.getOrNull()
             ?: return false
+        if (!PhoneAccountRegistrar.isOutgoingCallPermitted(context)) return false
         val uri: Uri = PhoneAccountRegistrar.buildPeerUri(peerId)
         val extras = Bundle().apply {
             putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, PhoneAccountRegistrar.phoneAccountHandle(context))
@@ -30,6 +31,7 @@ object TelecomFacade {
     fun addIncomingCall(context: Context, callId: String, callerId: String, callerName: String): Boolean {
         val telecom = runCatching { context.getSystemService(TelecomManager::class.java) }.getOrNull()
             ?: return false
+        if (!PhoneAccountRegistrar.isIncomingCallPermitted(context)) return false
         val extras = Bundle().apply {
             putParcelable(TelecomManager.EXTRA_INCOMING_CALL_ADDRESS, PhoneAccountRegistrar.buildPeerUri(callerId))
             putString(EXTRA_CALL_ID, callId)
